@@ -64,55 +64,134 @@ fi
 cp "$CONFIG_DIR/docker-compose.yml" "$INSTALL_DIR/"
 cp "$CONFIG_DIR/config.toml" "$INSTALL_DIR/"
 
-# --- API keys ---
+# --- LLM provider setup ---
 if [ -f "$INSTALL_DIR/.env" ]; then
-    echo "[4/5] .env exists, keeping current keys"
+    echo "[4/5] .env exists, keeping current config"
 else
-    echo "[4/5] Setting up API keys..."
+    echo "[4/5] Setting up LLM provider..."
+    echo ""
+    echo "  How do you want to run LLM inference?"
+    echo ""
+    echo "  1) Cloud API  — OpenRouter, Venice, Together, etc. (recommended)"
+    echo "  2) Local / LAN — Ollama, vLLM, llama.cpp on this or another machine"
     echo ""
 
-    PRIMARY_KEY=""
-    while [ -z "$PRIMARY_KEY" ]; do
-        read -rp "  Primary LLM API key (required): " PRIMARY_KEY
-        if [ -z "$PRIMARY_KEY" ]; then
-            echo "  An API key is required (e.g. from openrouter.ai, venice.ai, together.ai)"
-        fi
+    PROVIDER_MODE=""
+    while [ "$PROVIDER_MODE" != "1" ] && [ "$PROVIDER_MODE" != "2" ]; do
+        read -rp "  Choose [1/2]: " PROVIDER_MODE
     done
 
-    read -rp "  Primary API base URL [https://openrouter.ai/api/v1]: " PRIMARY_URL
-    PRIMARY_URL="${PRIMARY_URL:-https://openrouter.ai/api/v1}"
-
-    read -rp "  Backup LLM API key (optional, press Enter to skip): " BACKUP_KEY
-
-    {
-        echo "# Primary LLM provider"
-        echo "LLM_VLLM_API_KEY=${PRIMARY_KEY}"
-        echo "LLM_VLLM_BASE_URL=${PRIMARY_URL}"
+    if [ "$PROVIDER_MODE" = "2" ]; then
+        # --- Local / LAN setup ---
         echo ""
-        echo "# Needed for client initialization"
-        echo "LLM_OPENAI_API_KEY=${PRIMARY_KEY}"
-    } > "$INSTALL_DIR/.env"
+        echo "  Local inference setup"
+        echo "  Your server must expose an OpenAI-compatible API (/v1/chat/completions)"
+        echo ""
+        echo "  Common URLs:"
+        echo "    Ollama (this machine):    http://localhost:11434/v1"
+        echo "    Ollama (LAN):             http://192.168.x.x:11434/v1"
+        echo "    vLLM:                     http://localhost:8001/v1"
+        echo "    llama.cpp:                http://localhost:8080/v1"
+        echo ""
 
-    if [ -n "$BACKUP_KEY" ]; then
-        read -rp "  Backup API base URL [https://api.venice.ai/api/v1]: " BACKUP_URL
-        BACKUP_URL="${BACKUP_URL:-https://api.venice.ai/api/v1}"
+        read -rp "  Server URL: " LOCAL_URL
+        while [ -z "$LOCAL_URL" ]; do
+            echo "  URL is required"
+            read -rp "  Server URL: " LOCAL_URL
+        done
+
+        read -rp "  API key (press Enter for 'none' if not needed): " LOCAL_KEY
+        LOCAL_KEY="${LOCAL_KEY:-none}"
+
+        echo ""
+        echo "  You need to set model names in config.toml to match your server."
+        echo "  Example: for Ollama, use model names like 'qwen2.5:32b' or 'llama3.3:70b'"
+        echo ""
+        read -rp "  Model name for light tasks (deriver, summary) [qwen2.5:32b]: " LIGHT_MODEL
+        LIGHT_MODEL="${LIGHT_MODEL:-qwen2.5:32b}"
+
+        read -rp "  Model name for heavy tasks (dream, max dialectic) [qwen2.5:32b]: " HEAVY_MODEL
+        HEAVY_MODEL="${HEAVY_MODEL:-$LIGHT_MODEL}"
+
         {
+            echo "# Local / LAN LLM provider"
+            echo "LLM_VLLM_API_KEY=${LOCAL_KEY}"
+            echo "LLM_VLLM_BASE_URL=${LOCAL_URL}"
             echo ""
-            echo "# Backup LLM provider + embeddings"
-            echo "LLM_OPENAI_COMPATIBLE_API_KEY=${BACKUP_KEY}"
-        } >> "$INSTALL_DIR/.env"
-        # Update config.toml with backup URL
-        sed -i "s|OPENAI_COMPATIBLE_BASE_URL = .*|OPENAI_COMPATIBLE_BASE_URL = \"${BACKUP_URL}\"|" "$INSTALL_DIR/config.toml"
+            echo "# Needed for client initialization"
+            echo "LLM_OPENAI_API_KEY=${LOCAL_KEY}"
+            echo ""
+            echo "# Embeddings routed through same local server"
+            echo "LLM_OPENAI_COMPATIBLE_API_KEY=${LOCAL_KEY}"
+        } > "$INSTALL_DIR/.env"
+
+        # Update config.toml with local models and URL
+        sed -i "s|OPENAI_COMPATIBLE_BASE_URL = .*|OPENAI_COMPATIBLE_BASE_URL = \"${LOCAL_URL}\"|" "$INSTALL_DIR/config.toml"
+
+        # Replace all model names — light tier
+        sed -i "s|\"z-ai/glm-4.7-flash\"|\"${LIGHT_MODEL}\"|g" "$INSTALL_DIR/config.toml"
+        sed -i "s|\"zai-org-glm-4.7-flash\"|\"${LIGHT_MODEL}\"|g" "$INSTALL_DIR/config.toml"
+
+        # Medium tier — use heavy model (local typically has one or two models)
+        sed -i "s|\"x-ai/grok-4.1-fast\"|\"${HEAVY_MODEL}\"|g" "$INSTALL_DIR/config.toml"
+        sed -i "s|\"grok-41-fast\"|\"${HEAVY_MODEL}\"|g" "$INSTALL_DIR/config.toml"
+
+        # Heavy tier
+        sed -i "s|\"z-ai/glm-5\"|\"${HEAVY_MODEL}\"|g" "$INSTALL_DIR/config.toml"
+        sed -i "s|\"zai-org-glm-5\"|\"${HEAVY_MODEL}\"|g" "$INSTALL_DIR/config.toml"
+
+        # Embeddings: local servers may not support text-embedding-3-small
+        # Switch to "openai" provider which will use the primary key
+        sed -i 's|EMBEDDING_PROVIDER = "openrouter"|EMBEDDING_PROVIDER = "openai"|' "$INSTALL_DIR/config.toml"
+
+        echo "  Configured for local inference at ${LOCAL_URL}"
+
     else
-        # No backup — remove backup provider references from config
-        sed -i '/^BACKUP_PROVIDER/d; /^BACKUP_MODEL/d' "$INSTALL_DIR/config.toml"
-        # Route embeddings through primary provider instead
-        sed -i "s|OPENAI_COMPATIBLE_BASE_URL = .*|OPENAI_COMPATIBLE_BASE_URL = \"${PRIMARY_URL}\"|" "$INSTALL_DIR/config.toml"
+        # --- Cloud API setup ---
+        echo ""
+
+        PRIMARY_KEY=""
+        while [ -z "$PRIMARY_KEY" ]; do
+            read -rp "  Primary LLM API key (required): " PRIMARY_KEY
+            if [ -z "$PRIMARY_KEY" ]; then
+                echo "  An API key is required (e.g. from openrouter.ai, venice.ai, together.ai)"
+            fi
+        done
+
+        read -rp "  Primary API base URL [https://openrouter.ai/api/v1]: " PRIMARY_URL
+        PRIMARY_URL="${PRIMARY_URL:-https://openrouter.ai/api/v1}"
+
+        read -rp "  Backup LLM API key (optional, press Enter to skip): " BACKUP_KEY
+
         {
+            echo "# Primary LLM provider"
+            echo "LLM_VLLM_API_KEY=${PRIMARY_KEY}"
+            echo "LLM_VLLM_BASE_URL=${PRIMARY_URL}"
             echo ""
-            echo "# Embeddings routed through primary provider (no backup configured)"
-            echo "LLM_OPENAI_COMPATIBLE_API_KEY=${PRIMARY_KEY}"
-        } >> "$INSTALL_DIR/.env"
+            echo "# Needed for client initialization"
+            echo "LLM_OPENAI_API_KEY=${PRIMARY_KEY}"
+        } > "$INSTALL_DIR/.env"
+
+        if [ -n "$BACKUP_KEY" ]; then
+            read -rp "  Backup API base URL [https://api.venice.ai/api/v1]: " BACKUP_URL
+            BACKUP_URL="${BACKUP_URL:-https://api.venice.ai/api/v1}"
+            {
+                echo ""
+                echo "# Backup LLM provider + embeddings"
+                echo "LLM_OPENAI_COMPATIBLE_API_KEY=${BACKUP_KEY}"
+            } >> "$INSTALL_DIR/.env"
+            sed -i "s|OPENAI_COMPATIBLE_BASE_URL = .*|OPENAI_COMPATIBLE_BASE_URL = \"${BACKUP_URL}\"|" "$INSTALL_DIR/config.toml"
+        else
+            # No backup — remove backup provider references from config
+            sed -i '/^BACKUP_PROVIDER/d; /^BACKUP_MODEL/d' "$INSTALL_DIR/config.toml"
+            # Route embeddings through primary provider instead
+            sed -i "s|OPENAI_COMPATIBLE_BASE_URL = .*|OPENAI_COMPATIBLE_BASE_URL = \"${PRIMARY_URL}\"|" "$INSTALL_DIR/config.toml"
+            {
+                echo ""
+                echo "# Embeddings routed through primary provider (no backup configured)"
+                echo "LLM_OPENAI_COMPATIBLE_API_KEY=${PRIMARY_KEY}"
+            } >> "$INSTALL_DIR/.env"
+        fi
     fi
 
     echo "  Keys saved to $INSTALL_DIR/.env"

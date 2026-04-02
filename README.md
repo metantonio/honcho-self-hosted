@@ -205,6 +205,45 @@ PROVIDER = "anthropic"     # best reasoning for rare tasks
 MODEL = "claude-sonnet-4-6"
 ```
 
+## Local / LAN Inference
+
+For maximum privacy, run a local model instead of a cloud API. Any server with an OpenAI-compatible endpoint works.
+
+### Ollama (easiest)
+
+```bash
+# Install Ollama on this machine or another on your LAN
+curl -fsSL https://ollama.com/install.sh | sh
+
+# Pull a model with good function calling
+ollama pull qwen2.5:32b
+```
+
+Then run the setup script and choose option 2 (Local / LAN):
+
+```
+Server URL: http://localhost:11434/v1
+Model name for light tasks: qwen2.5:32b
+Model name for heavy tasks: qwen2.5:32b
+```
+
+For a separate LAN machine, use its IP: `http://192.168.x.x:11434/v1`
+
+### vLLM
+
+```bash
+# Serve a model with tool calling support
+vllm serve Qwen/Qwen2.5-32B-Instruct --port 8001 --enable-auto-tool-choice
+```
+
+Setup: `http://localhost:8001/v1` with model name `Qwen/Qwen2.5-32B-Instruct`
+
+### Considerations
+
+- **Model size matters** — Honcho's agents need reliable function calling and structured JSON. Models under 14B may miss tool calls or malform output. 32B+ recommended.
+- **Embeddings** — local servers may not serve embedding models. The script switches to the `"openai"` embedding provider. If your server supports embeddings, you can change `EMBEDDING_PROVIDER` in `config.toml`.
+- **Same model for all tiers** — locally you'll typically run one model. The script sets it for all components. You can differentiate later in `config.toml` if you serve multiple models.
+
 ## Maintenance
 
 **Update Honcho:**
