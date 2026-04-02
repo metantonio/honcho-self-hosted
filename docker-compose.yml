@@ -81,7 +81,23 @@ services:
       interval: 5s
       timeout: 5s
       retries: 5
+      
+  # Added hermes
+  hermes:
+    container_name: hermes-agent
+    build:
+      context: /home/YOUR_USER/hermes-agent
+    restart: unless-stopped
+    volumes:
+      - hermes_data:/opt/data
+    environment:
+      - OPENAI_API_KEY=${LLM_OPENAI_API_KEY}
+      - OPENAI_BASE_URL=${LLM_VLLM_BASE_URL}
+      - HONCHO_API_URL=http://api:8000
+    depends_on:
+      - api
 
 volumes:
   pgdata:
   redis-data:
+  hermes_data:
