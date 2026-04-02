@@ -123,16 +123,18 @@ Hermes will now use your local Honcho instead of `api.honcho.dev`.
 
 ## Model Configuration
 
-LLM calls are tiered by task complexity:
+LLM calls are tiered by task complexity. Default models (change in `config.toml`):
 
-| Component | Primary (OpenRouter) | Backup (Venice) | When it runs |
-|-----------|---------------------|-----------------|-------------|
-| **Deriver** | `qwen/qwen3-5-35b-a3b` | `qwen3-5-35b-a3b` | Every message |
-| **Summary** | `qwen/qwen3-5-35b-a3b` | `qwen3-5-35b-a3b` | Every 20/60 messages |
-| **Dialectic** (low) | `qwen/qwen3-5-35b-a3b` | `qwen3-5-35b-a3b` | Per Hermes turn |
-| **Dialectic** (med/high) | `qwen/qwen3-5-122b-a10b` | `qwen3-5-122b-a10b` | Complex queries |
-| **Dialectic** (max) | `deepseek/deepseek-chat-v3-0324` | `deepseek-v3.2` | Hardest queries |
-| **Dream** | `deepseek/deepseek-chat-v3-0324` | `deepseek-v3.2` | Every ~8 hours |
+| Component | Model | When it runs |
+|-----------|-------|-------------|
+| **Deriver** | `qwen/qwen3-5-35b-a3b` (light) | Every message |
+| **Summary** | `qwen/qwen3-5-35b-a3b` (light) | Every 20/60 messages |
+| **Dialectic** (low) | `qwen/qwen3-5-35b-a3b` (light) | Per Hermes turn |
+| **Dialectic** (med/high) | `qwen/qwen3-5-122b-a10b` (medium) | Complex queries |
+| **Dialectic** (max) | `deepseek/deepseek-chat-v3-0324` (heavy) | Hardest queries |
+| **Dream** | `deepseek/deepseek-chat-v3-0324` (heavy) | Every ~8 hours |
+
+Each component has a primary and backup provider. If the primary fails on the last retry, the backup fires automatically.
 
 To change models, edit `~/honcho/config.toml` and rebuild:
 
