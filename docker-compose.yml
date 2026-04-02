@@ -88,6 +88,8 @@ services:
     build:
       context: /home/YOUR_USER/hermes-agent
     restart: unless-stopped
+    env_file:
+      - .env
     volumes:
       - hermes_data:/opt/data
     environment:
@@ -95,7 +97,16 @@ services:
       - OPENAI_BASE_URL=${LLM_VLLM_BASE_URL}
       - HONCHO_API_URL=http://api:8000
     depends_on:
-      - api
+      api:
+        condition: service_started
+    stdin_open: true
+    tty: true
+    logging:
+      options:
+        max-size: "10m"
+        max-file: "3"
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
 
 volumes:
   pgdata:
