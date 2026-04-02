@@ -211,22 +211,29 @@ For maximum privacy, run a local model instead of a cloud API. Any server with a
 
 Local servers have different model catalogs than cloud APIs, so model names will differ. The setup script asks you for the model name your server provides.
 
+Recommended local models for reliable function calling:
+
+| Model | Params | Ollama name | Notes |
+|-------|--------|------------|-------|
+| **GLM-4.7 Flash** | 30B MoE | `glm-4.7-flash` | Same family as cloud default, best tool use in 30B class |
+| **Llama 3.3** | 70B | `llama3.3:70b` | Battle-tested tools, needs ~40GB VRAM |
+
 ### Ollama (easiest)
 
 ```bash
 # Install Ollama on this machine or another on your LAN
 curl -fsSL https://ollama.com/install.sh | sh
 
-# Pull a model — 32B+ recommended for reliable function calling
-ollama pull qwen3:32b
+# Pull a model with strong function calling
+ollama pull glm-4.7-flash
 ```
 
 Then run the setup script and choose option 2 (Local / LAN):
 
 ```
 Server URL: http://localhost:11434/v1
-Model name for light tasks: qwen3:32b
-Model name for heavy tasks: qwen3:32b
+Model name for light tasks: glm-4.7-flash
+Model name for heavy tasks: glm-4.7-flash
 ```
 
 For a separate LAN machine, use its IP: `http://192.168.x.x:11434/v1`
@@ -235,10 +242,10 @@ For a separate LAN machine, use its IP: `http://192.168.x.x:11434/v1`
 
 ```bash
 # Serve a model with tool calling support
-vllm serve Qwen/Qwen3-32B --port 8001 --enable-auto-tool-choice
+vllm serve THUDM/GLM-4.7-Flash --port 8001 --enable-auto-tool-choice
 ```
 
-Setup: `http://localhost:8001/v1` with model name `Qwen/Qwen3-32B`
+Setup: `http://localhost:8001/v1` with model name `THUDM/GLM-4.7-Flash`
 
 ### Considerations
 
