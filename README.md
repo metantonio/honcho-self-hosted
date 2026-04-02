@@ -67,7 +67,7 @@ curl -sL https://raw.githubusercontent.com/elkimek/honcho-self-hosted/main/setup
 bash /tmp/setup.sh
 ```
 
-This installs Docker (if needed), clones Honcho, copies configs, prompts for API keys, starts everything, and configures Hermes. ~3 minutes.
+This installs Docker (if needed), clones Honcho, copies configs, prompts for API keys, starts everything, configures Hermes, and optionally sets up the MCP server. ~3 minutes.
 
 ## Manual Setup
 
@@ -259,6 +259,8 @@ Setup: `http://localhost:8001/v1` with model name `THUDM/GLM-4.7-Flash`
 Honcho includes an MCP server that exposes memory tools (search, chat, observations, peer cards) to any MCP-compatible client like Claude Code or Claude Desktop.
 
 The hosted version at `mcp.honcho.dev` points at Plastic Labs' cloud. For self-hosted, run the MCP server locally and point it at your Honcho instance.
+
+The setup script offers to configure MCP automatically. To set it up manually:
 
 ### Setup
 
