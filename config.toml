@@ -1,0 +1,173 @@
+# Honcho — self-hosted with OpenRouter primary, Venice backup
+#
+# Data sovereignty: all memory/state stays on this VM (PostgreSQL + Redis).
+#
+# PROVIDER STRATEGY:
+#   Primary: OpenRouter ("vllm" slot) — routes across 200+ providers, built-in fallbacks
+#   Backup:  Venice ("custom" slot) — kicks in if OpenRouter fails on final retry
+#
+# MODEL TIERS:
+#   Light (deriver, summary, low dialectic): qwen/qwen3-5-35b-a3b
+#   Medium (mid dialectic, dream specialist): qwen/qwen3-5-122b-a10b
+#   Heavy (dream main, max dialectic): deepseek/deepseek-chat-v3-0324
+#
+#   THINKING_BUDGET_TOKENS = 1 (Venice/OpenRouter don't support Anthropic thinking)
+
+[app]
+LOG_LEVEL = "INFO"
+SESSION_OBSERVERS_LIMIT = 10
+GET_CONTEXT_MAX_TOKENS = 100000
+MAX_FILE_SIZE = 5242880
+MAX_MESSAGE_SIZE = 25000
+EMBED_MESSAGES = true
+MAX_EMBEDDING_TOKENS = 8192
+NAMESPACE = "honcho"
+
+[db]
+CONNECTION_URI = "postgresql+psycopg://honcho:honcho@database:5432/honcho"
+SCHEMA = "public"
+POOL_SIZE = 10
+MAX_OVERFLOW = 20
+POOL_TIMEOUT = 30
+POOL_RECYCLE = 300
+
+[auth]
+USE_AUTH = false
+
+[cache]
+ENABLED = true
+URL = "redis://redis:6379/0?suppress=true"
+DEFAULT_TTL_SECONDS = 300
+
+# ---------------------------------------------------------------------------
+# LLM providers
+#   "vllm"   = OpenRouter (primary)   — set in .env: LLM_VLLM_API_KEY + LLM_VLLM_BASE_URL
+#   "custom"  = Venice (backup)        — set in .env: LLM_OPENAI_COMPATIBLE_API_KEY
+# ---------------------------------------------------------------------------
+[llm]
+DEFAULT_MAX_TOKENS = 2500
+EMBEDDING_PROVIDER = "openrouter"
+
+# Venice (backup provider)
+OPENAI_COMPATIBLE_BASE_URL = "https://api.venice.ai/api/v1"
+
+# ---------------------------------------------------------------------------
+# Deriver — observation extraction (runs every message, needs speed)
+# ---------------------------------------------------------------------------
+[deriver]
+ENABLED = true
+WORKERS = 1
+POLLING_SLEEP_INTERVAL_SECONDS = 1.0
+STALE_SESSION_TIMEOUT_MINUTES = 5
+PROVIDER = "vllm"
+MODEL = "qwen/qwen3-5-35b-a3b"
+BACKUP_PROVIDER = "custom"
+BACKUP_MODEL = "qwen3-5-35b-a3b"
+DEDUPLICATE = true
+MAX_OUTPUT_TOKENS = 4096
+THINKING_BUDGET_TOKENS = 1
+MAX_INPUT_TOKENS = 23000
+WORKING_REPRESENTATION_MAX_OBSERVATIONS = 100
+REPRESENTATION_BATCH_MAX_TOKENS = 1024
+FLUSH_ENABLED = false
+
+# ---------------------------------------------------------------------------
+# Dialectic — multi-level reasoning for peer.chat
+# ---------------------------------------------------------------------------
+[dialectic]
+MAX_OUTPUT_TOKENS = 8192
+MAX_INPUT_TOKENS = 100000
+HISTORY_TOKEN_LIMIT = 8192
+SESSION_HISTORY_MAX_TOKENS = 4096
+
+[dialectic.levels.minimal]
+PROVIDER = "vllm"
+MODEL = "qwen/qwen3-5-35b-a3b"
+BACKUP_PROVIDER = "custom"
+BACKUP_MODEL = "qwen3-5-35b-a3b"
+THINKING_BUDGET_TOKENS = 1
+MAX_TOOL_ITERATIONS = 1
+MAX_OUTPUT_TOKENS = 250
+
+[dialectic.levels.low]
+PROVIDER = "vllm"
+MODEL = "qwen/qwen3-5-35b-a3b"
+BACKUP_PROVIDER = "custom"
+BACKUP_MODEL = "qwen3-5-35b-a3b"
+THINKING_BUDGET_TOKENS = 1
+MAX_TOOL_ITERATIONS = 5
+
+[dialectic.levels.medium]
+PROVIDER = "vllm"
+MODEL = "qwen/qwen3-5-122b-a10b"
+BACKUP_PROVIDER = "custom"
+BACKUP_MODEL = "qwen3-5-122b-a10b"
+THINKING_BUDGET_TOKENS = 1
+MAX_TOOL_ITERATIONS = 2
+
+[dialectic.levels.high]
+PROVIDER = "vllm"
+MODEL = "qwen/qwen3-5-122b-a10b"
+BACKUP_PROVIDER = "custom"
+BACKUP_MODEL = "qwen3-5-122b-a10b"
+THINKING_BUDGET_TOKENS = 1
+MAX_TOOL_ITERATIONS = 4
+
+[dialectic.levels.max]
+PROVIDER = "vllm"
+MODEL = "deepseek/deepseek-chat-v3-0324"
+BACKUP_PROVIDER = "custom"
+BACKUP_MODEL = "deepseek-v3.2"
+THINKING_BUDGET_TOKENS = 1
+MAX_TOOL_ITERATIONS = 10
+
+# ---------------------------------------------------------------------------
+# Summary — session summarization
+# ---------------------------------------------------------------------------
+[summary]
+ENABLED = true
+MESSAGES_PER_SHORT_SUMMARY = 20
+MESSAGES_PER_LONG_SUMMARY = 60
+PROVIDER = "vllm"
+MODEL = "qwen/qwen3-5-35b-a3b"
+BACKUP_PROVIDER = "custom"
+BACKUP_MODEL = "qwen3-5-35b-a3b"
+MAX_TOKENS_SHORT = 1000
+MAX_TOKENS_LONG = 4000
+THINKING_BUDGET_TOKENS = 1
+
+# ---------------------------------------------------------------------------
+# Dream — memory consolidation (runs rarely, needs best quality)
+# ---------------------------------------------------------------------------
+[dream]
+ENABLED = true
+DOCUMENT_THRESHOLD = 50
+IDLE_TIMEOUT_MINUTES = 60
+MIN_HOURS_BETWEEN_DREAMS = 8
+ENABLED_TYPES = ["omni"]
+PROVIDER = "vllm"
+MODEL = "deepseek/deepseek-chat-v3-0324"
+BACKUP_PROVIDER = "custom"
+BACKUP_MODEL = "deepseek-v3.2"
+MAX_OUTPUT_TOKENS = 16384
+THINKING_BUDGET_TOKENS = 1
+MAX_TOOL_ITERATIONS = 20
+HISTORY_TOKEN_LIMIT = 16384
+DEDUCTION_MODEL = "qwen/qwen3-5-122b-a10b"
+INDUCTION_MODEL = "qwen/qwen3-5-122b-a10b"
+
+[peer_card]
+ENABLED = true
+
+[vector_store]
+TYPE = "pgvector"
+DIMENSIONS = 1536
+
+[metrics]
+ENABLED = false
+
+[telemetry]
+ENABLED = false
+
+[sentry]
+ENABLED = false
