@@ -27,9 +27,9 @@ By default, Hermes uses Plastic Labs' managed cloud ([honcho.dev](https://honcho
 ## What this does
 
 - Runs Honcho's full memory stack (API, Deriver, PostgreSQL, Redis) on your VM
-- Routes LLM calls through **OpenRouter** (primary) with **Venice AI** as backup
-- Embeddings via Venice AI (`openai/text-embedding-3-small`) — see [Known Limitations](#known-limitations)
+- Routes LLM calls through any OpenAI-compatible provider (primary + backup)
 - All your data stays on your VM — no third-party cloud storage
+- Works with OpenRouter, Venice, Routstr, Together, Ollama, or any other provider
 
 ## Architecture
 
