@@ -4,10 +4,10 @@ set -euo pipefail
 # Self-hosted Honcho setup for Hermes Agent
 #
 # Usage:
-#   curl -sL https://raw.githubusercontent.com/elkimek/honcho-self-hosted/main/setup.sh -o /tmp/setup.sh
+#   curl -sL https://raw.githubusercontent.com/metantonio/honcho-self-hosted/main/setup.sh -o /tmp/setup.sh
 #   bash /tmp/setup.sh
 
-REPO="https://github.com/elkimek/honcho-self-hosted.git"
+REPO="https://github.com/metantonio/honcho-self-hosted.git"
 HONCHO_REPO="https://github.com/plastic-labs/honcho.git"
 INSTALL_DIR="$HOME/honcho"
 CONFIG_DIR="$HOME/honcho-self-hosted"
@@ -105,12 +105,12 @@ else
 
         echo ""
         echo "  You need to set model names in config.toml to match your server."
-        echo "  Use model names from your server (e.g. Ollama: 'glm-4.7-flash', vLLM: 'THUDM/GLM-4.7-Flash')"
+        echo "  Use model names from your server (e.g. Ollama: 'glm-4.7-flash', vLLM: 'THUDM/GLM-4.7-Flash', llama.cpp: 'Qwen3.5-9B-Q4_K_M.gguf')"
         echo ""
-        read -rp "  Model name for light tasks (deriver, summary) [glm-4.7-flash]: " LIGHT_MODEL
+        read -rp "  Model name for light tasks (deriver, summary) [glm-4.7-flash, Qwen3.5-9B-Q4_K_M.gguf]: " LIGHT_MODEL
         LIGHT_MODEL="${LIGHT_MODEL:-glm-4.7-flash}"
 
-        read -rp "  Model name for heavy tasks (dream, max dialectic) [glm-4.7-flash]: " HEAVY_MODEL
+        read -rp "  Model name for heavy tasks (dream, max dialectic) [glm-4.7-flash, Qwen3.5-27B-Q4_K_M.gguf]: " HEAVY_MODEL
         HEAVY_MODEL="${HEAVY_MODEL:-$LIGHT_MODEL}"
 
         echo ""
