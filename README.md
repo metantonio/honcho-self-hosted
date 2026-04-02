@@ -8,7 +8,7 @@ Self-host [Honcho](https://github.com/plastic-labs/honcho) (Plastic Labs' memory
 
 - Runs Honcho's full memory stack (API, Deriver, PostgreSQL, Redis) on your VM
 - Routes LLM calls through **OpenRouter** (primary) with **Venice AI** as backup
-- Embeddings via OpenRouter (`openai/text-embedding-3-small`)
+- Embeddings via Venice AI (`openai/text-embedding-3-small`) — see [Known Limitations](#known-limitations)
 - All your data stays on your VM — no third-party cloud storage
 
 ## Architecture
@@ -30,7 +30,7 @@ Hermes Agent ──► localhost:8000 (self-hosted Honcho API)
 - Ubuntu 22.04+ VM (tested on 22.04, 6GB RAM, 80GB disk)
 - Docker Engine + Compose plugin
 - OpenRouter API key ([openrouter.ai](https://openrouter.ai))
-- Venice AI API key ([venice.ai](https://venice.ai)) — optional backup
+- Venice AI API key ([venice.ai](https://venice.ai)) — optional backup + embeddings
 
 ## Setup
 
@@ -41,7 +41,7 @@ sudo apt-get update && sudo apt-get install -y ca-certificates curl
 sudo install -m 0755 -d /etc/apt/keyrings
 sudo curl -fsSL https://download.docker.com/linux/ubuntu/gpg -o /etc/apt/keyrings/docker.asc
 sudo chmod a+r /etc/apt/keyrings/docker.asc
-echo "deb [arch=amd64 signed-by=/etc/apt/keyrings/docker.asc] \
+echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.asc] \
   https://download.docker.com/linux/ubuntu $(. /etc/os-release && echo $VERSION_CODENAME) stable" \
   | sudo tee /etc/apt/sources.list.d/docker.list
 sudo apt-get update
@@ -51,14 +51,19 @@ sudo usermod -aG docker $USER
 
 Log out and back in for the group change to take effect.
 
-### 2. Clone Honcho + copy configs
+### 2. Clone repos + copy configs
 
 ```bash
+# Clone this config repo
+git clone https://github.com/elkimek/honcho-self-hosted.git ~/honcho-self-hosted
+
+# Clone upstream Honcho
 git clone --depth 1 https://github.com/plastic-labs/honcho.git ~/honcho
 
-# Copy config files from this repo into the clone
-cp docker-compose.yml config.toml ~/honcho/
-cp env.example ~/honcho/.env
+# Copy config files into the Honcho clone
+cp ~/honcho-self-hosted/docker-compose.yml ~/honcho/
+cp ~/honcho-self-hosted/config.toml ~/honcho/
+cp ~/honcho-self-hosted/env.example ~/honcho/.env
 ```
 
 ### 3. Set your API keys
@@ -88,17 +93,17 @@ docker compose ps
 docker compose logs -f api deriver
 ```
 
-Verify the API is responding:
+Wait ~10 seconds for the API to start, then verify:
 
 ```bash
-curl http://localhost:8000/openapi.json | head -1
+curl -s http://localhost:8000/openapi.json | head -1
 ```
 
 ### 5. Configure Hermes
 
 ```bash
 mkdir -p ~/.honcho
-cp honcho-config.json ~/.honcho/config.json
+cp ~/honcho-self-hosted/honcho-config.json ~/.honcho/config.json
 hermes gateway restart
 ```
 
@@ -117,9 +122,10 @@ LLM calls are tiered by task complexity:
 | **Dialectic** (max) | `deepseek/deepseek-chat-v3-0324` | `deepseek-v3.2` | Hardest queries |
 | **Dream** | `deepseek/deepseek-chat-v3-0324` | `deepseek-v3.2` | Every ~8 hours |
 
-To change models, edit `config.toml` and restart:
+To change models, edit `~/honcho/config.toml` and rebuild:
 
 ```bash
+cd ~/honcho
 docker compose up -d --build
 ```
 
@@ -151,14 +157,15 @@ MODEL = "claude-sonnet-4-6"
 ## Maintenance
 
 **Update Honcho:**
+
 ```bash
 cd ~/honcho
 docker compose down
+git stash          # stash our config files
 git pull
+git stash pop      # restore config files
 docker compose up -d --build
 ```
-
-Your config files (`docker-compose.yml`, `config.toml`, `.env`) won't be overwritten by `git pull`.
 
 **View logs:**
 ```bash
@@ -187,7 +194,7 @@ docker compose exec database pg_dump -U honcho honcho > backup.sql
 |------|---------|
 | `docker-compose.yml` | Docker deployment — API, Deriver, PostgreSQL, Redis |
 | `config.toml` | Honcho config — providers, models, feature flags |
-| `env.example` | API keys template — copy to `.env` and fill in |
+| `env.example` | API keys template — copy to `~/honcho/.env` and fill in |
 | `honcho-config.json` | Hermes-side config — tells Hermes to use localhost:8000 |
 
 ## Credits
