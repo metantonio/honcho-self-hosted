@@ -1,17 +1,17 @@
-# Honcho — self-hosted with OpenRouter primary, Venice backup
+# Honcho — self-hosted with configurable LLM providers
 #
 # Data sovereignty: all memory/state stays on this VM (PostgreSQL + Redis).
 #
 # PROVIDER STRATEGY:
-#   Primary: OpenRouter ("vllm" slot) — routes across 200+ providers, built-in fallbacks
-#   Backup:  Venice ("custom" slot) — kicks in if OpenRouter fails on final retry
+#   Primary: "vllm" slot (any OpenAI-compatible API, default: OpenRouter)
+#   Backup:  "custom" slot (optional, kicks in on final retry)
 #
-# MODEL TIERS:
-#   Light (deriver, summary, low dialectic): qwen/qwen3-5-35b-a3b
-#   Medium (mid dialectic, dream specialist): qwen/qwen3-5-122b-a10b
-#   Heavy (dream main, max dialectic): deepseek/deepseek-chat-v3-0324
+# MODEL TIERS (chosen for function-calling reliability):
+#   Light:  z-ai/glm-4.7-flash  — 79.5% tau-bench, fast, cheap
+#   Medium: x-ai/grok-4.1-fast  — purpose-built for tool use, 2M context
+#   Heavy:  z-ai/glm-5          — 89.7% tau2-bench, best agentic scores
 #
-#   THINKING_BUDGET_TOKENS = 1 (Venice/OpenRouter don't support Anthropic thinking)
+#   THINKING_BUDGET_TOKENS = 1 (these providers don't support Anthropic thinking)
 
 [app]
 LOG_LEVEL = "INFO"
@@ -41,18 +41,18 @@ DEFAULT_TTL_SECONDS = 300
 
 # ---------------------------------------------------------------------------
 # LLM providers
-#   "vllm"   = OpenRouter (primary)   — set in .env: LLM_VLLM_API_KEY + LLM_VLLM_BASE_URL
-#   "custom"  = Venice (backup)        — set in .env: LLM_OPENAI_COMPATIBLE_API_KEY
+#   "vllm"   = primary   — set in .env: LLM_VLLM_API_KEY + LLM_VLLM_BASE_URL
+#   "custom"  = backup    — set in .env: LLM_OPENAI_COMPATIBLE_API_KEY
 # ---------------------------------------------------------------------------
 [llm]
 DEFAULT_MAX_TOKENS = 2500
 EMBEDDING_PROVIDER = "openrouter"
 
-# Venice (backup provider)
+# Backup provider base URL (set in .env or overridden by setup script)
 OPENAI_COMPATIBLE_BASE_URL = "https://api.venice.ai/api/v1"
 
 # ---------------------------------------------------------------------------
-# Deriver — observation extraction (runs every message, needs speed)
+# Deriver — observation extraction (runs every message, needs speed + tools)
 # ---------------------------------------------------------------------------
 [deriver]
 ENABLED = true
@@ -60,9 +60,9 @@ WORKERS = 1
 POLLING_SLEEP_INTERVAL_SECONDS = 1.0
 STALE_SESSION_TIMEOUT_MINUTES = 5
 PROVIDER = "vllm"
-MODEL = "qwen/qwen3-5-35b-a3b"
+MODEL = "z-ai/glm-4.7-flash"
 BACKUP_PROVIDER = "custom"
-BACKUP_MODEL = "qwen3-5-35b-a3b"
+BACKUP_MODEL = "zai-org-glm-4.7-flash"
 DEDUPLICATE = true
 MAX_OUTPUT_TOKENS = 4096
 THINKING_BUDGET_TOKENS = 1
@@ -82,42 +82,42 @@ SESSION_HISTORY_MAX_TOKENS = 4096
 
 [dialectic.levels.minimal]
 PROVIDER = "vllm"
-MODEL = "qwen/qwen3-5-35b-a3b"
+MODEL = "z-ai/glm-4.7-flash"
 BACKUP_PROVIDER = "custom"
-BACKUP_MODEL = "qwen3-5-35b-a3b"
+BACKUP_MODEL = "zai-org-glm-4.7-flash"
 THINKING_BUDGET_TOKENS = 1
 MAX_TOOL_ITERATIONS = 1
 MAX_OUTPUT_TOKENS = 250
 
 [dialectic.levels.low]
 PROVIDER = "vllm"
-MODEL = "qwen/qwen3-5-35b-a3b"
+MODEL = "z-ai/glm-4.7-flash"
 BACKUP_PROVIDER = "custom"
-BACKUP_MODEL = "qwen3-5-35b-a3b"
+BACKUP_MODEL = "zai-org-glm-4.7-flash"
 THINKING_BUDGET_TOKENS = 1
 MAX_TOOL_ITERATIONS = 5
 
 [dialectic.levels.medium]
 PROVIDER = "vllm"
-MODEL = "qwen/qwen3-5-122b-a10b"
+MODEL = "x-ai/grok-4.1-fast"
 BACKUP_PROVIDER = "custom"
-BACKUP_MODEL = "qwen3-5-122b-a10b"
+BACKUP_MODEL = "grok-41-fast"
 THINKING_BUDGET_TOKENS = 1
 MAX_TOOL_ITERATIONS = 2
 
 [dialectic.levels.high]
 PROVIDER = "vllm"
-MODEL = "qwen/qwen3-5-122b-a10b"
+MODEL = "x-ai/grok-4.1-fast"
 BACKUP_PROVIDER = "custom"
-BACKUP_MODEL = "qwen3-5-122b-a10b"
+BACKUP_MODEL = "grok-41-fast"
 THINKING_BUDGET_TOKENS = 1
 MAX_TOOL_ITERATIONS = 4
 
 [dialectic.levels.max]
 PROVIDER = "vllm"
-MODEL = "deepseek/deepseek-chat-v3-0324"
+MODEL = "z-ai/glm-5"
 BACKUP_PROVIDER = "custom"
-BACKUP_MODEL = "deepseek-v3.2"
+BACKUP_MODEL = "zai-org-glm-5"
 THINKING_BUDGET_TOKENS = 1
 MAX_TOOL_ITERATIONS = 10
 
@@ -129,9 +129,9 @@ ENABLED = true
 MESSAGES_PER_SHORT_SUMMARY = 20
 MESSAGES_PER_LONG_SUMMARY = 60
 PROVIDER = "vllm"
-MODEL = "qwen/qwen3-5-35b-a3b"
+MODEL = "z-ai/glm-4.7-flash"
 BACKUP_PROVIDER = "custom"
-BACKUP_MODEL = "qwen3-5-35b-a3b"
+BACKUP_MODEL = "zai-org-glm-4.7-flash"
 MAX_TOKENS_SHORT = 1000
 MAX_TOKENS_LONG = 4000
 THINKING_BUDGET_TOKENS = 1
@@ -146,15 +146,15 @@ IDLE_TIMEOUT_MINUTES = 60
 MIN_HOURS_BETWEEN_DREAMS = 8
 ENABLED_TYPES = ["omni"]
 PROVIDER = "vllm"
-MODEL = "deepseek/deepseek-chat-v3-0324"
+MODEL = "z-ai/glm-5"
 BACKUP_PROVIDER = "custom"
-BACKUP_MODEL = "deepseek-v3.2"
+BACKUP_MODEL = "zai-org-glm-5"
 MAX_OUTPUT_TOKENS = 16384
 THINKING_BUDGET_TOKENS = 1
 MAX_TOOL_ITERATIONS = 20
 HISTORY_TOKEN_LIMIT = 16384
-DEDUCTION_MODEL = "qwen/qwen3-5-122b-a10b"
-INDUCTION_MODEL = "qwen/qwen3-5-122b-a10b"
+DEDUCTION_MODEL = "x-ai/grok-4.1-fast"
+INDUCTION_MODEL = "x-ai/grok-4.1-fast"
 
 [peer_card]
 ENABLED = true

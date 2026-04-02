@@ -8,7 +8,15 @@ Self-host [Honcho](https://github.com/plastic-labs/honcho) (Plastic Labs' memory
 
 Hermes Agent has a 4-layer memory system. The cross-session memory layer is powered by [Honcho](https://github.com/plastic-labs/honcho), which builds a deepening model of the user across conversations — extracting observations, recalling context, and consolidating memories over time.
 
-By default, Hermes uses Plastic Labs' managed cloud ([honcho.dev](https://honcho.dev)) + their Neuromancer models. This works out of the box but means your conversation data and user profile live on their servers.
+By default, Hermes uses Plastic Labs' managed cloud ([honcho.dev](https://honcho.dev)) + their [Neuromancer](https://blog.plasticlabs.ai/research/Introducing-Neuromancer-XR) models. This works out of the box but means your conversation data and user profile live on their servers.
+
+### What are Neuromancer models?
+
+[Neuromancer XR](https://blog.plasticlabs.ai/research/Introducing-Neuromancer-XR) is a specialized 8B model fine-tuned from Qwen3-8B specifically for extracting logical conclusions from conversations. Unlike general-purpose LLMs which are optimized for plausible text generation, Neuromancer is trained on ~10,000 curated social reasoning traces to follow formal logic — extracting both explicit facts ("user said they like Python") and deductive conclusions ("user is likely a developer").
+
+It scores 86.9% on the LoCoMo memory benchmark vs. 69.6% for base Qwen3-8B and 80.0% for Claude 4 Sonnet.
+
+**Tradeoff of not using it:** General-purpose models work well for observation extraction and memory recall — Honcho's prompts and tool-calling pipeline compensate for much of the gap. You may get slightly less precise deductive reasoning, but capable models (GLM-5, Grok 4.1) with strong function calling largely close the difference. The main advantage of self-hosting is data sovereignty, not matching Neuromancer's exact reasoning quality.
 
 ## Deployment Options
 
@@ -152,18 +160,18 @@ Honcho has 4 background components that use LLM calls:
 - **Summary** — Compresses long sessions into short/long summaries to keep context manageable.
 - **Dream** — Runs every ~8 hours. Merges redundant observations, deletes outdated ones, infers higher-level patterns. Memory consolidation.
 
-LLM calls are tiered by task complexity. Use lighter models for frequent tasks and heavier ones for rare, complex tasks. Example defaults shipped in `config.toml`:
+LLM calls are tiered by task complexity. Defaults are chosen for **function-calling reliability** (the primary requirement for Honcho's tool-using agents):
 
-| Component | Example model | Tier | When it runs |
+| Component | Default model | Tier | When it runs |
 |-----------|--------------|------|-------------|
-| **Deriver** | `qwen/qwen3-5-35b-a3b` | Light — runs often, needs speed | Every message |
-| **Summary** | `qwen/qwen3-5-35b-a3b` | Light | Every 20/60 messages |
-| **Dialectic** (low) | `qwen/qwen3-5-35b-a3b` | Light | Per Hermes turn |
-| **Dialectic** (med/high) | `qwen/qwen3-5-122b-a10b` | Medium | Complex queries |
-| **Dialectic** (max) | `deepseek/deepseek-chat-v3-0324` | Heavy — best reasoning | Hardest queries |
-| **Dream** | `deepseek/deepseek-chat-v3-0324` | Heavy | Every ~8 hours |
+| **Deriver** | `z-ai/glm-4.7-flash` | Light — fast, cheap, 79.5% tau-bench | Every message |
+| **Summary** | `z-ai/glm-4.7-flash` | Light | Every 20/60 messages |
+| **Dialectic** (low) | `z-ai/glm-4.7-flash` | Light | Per Hermes turn |
+| **Dialectic** (med/high) | `x-ai/grok-4.1-fast` | Medium — built for tool use, 2M context | Complex queries |
+| **Dialectic** (max) | `z-ai/glm-5` | Heavy — 89.7% tau2-bench | Hardest queries |
+| **Dream** | `z-ai/glm-5` | Heavy | Every ~8 hours |
 
-Any model your provider supports will work — just change the model name in `config.toml`. Each component also has a backup provider that fires automatically if the primary fails on the last retry.
+These are [OpenRouter](https://openrouter.ai) model IDs. Any model your provider supports will work — just change the name in `config.toml`. Each component also has a backup provider that fires automatically if the primary fails on the last retry.
 
 To change models, edit `~/honcho/config.toml` and rebuild:
 
