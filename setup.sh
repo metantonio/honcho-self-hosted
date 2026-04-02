@@ -106,7 +106,13 @@ else
     else
         # No backup — remove backup provider references from config
         sed -i '/^BACKUP_PROVIDER/d; /^BACKUP_MODEL/d' "$INSTALL_DIR/config.toml"
-        sed -i '/^OPENAI_COMPATIBLE_BASE_URL/d' "$INSTALL_DIR/config.toml"
+        # Route embeddings through primary provider instead
+        sed -i "s|OPENAI_COMPATIBLE_BASE_URL = .*|OPENAI_COMPATIBLE_BASE_URL = \"${PRIMARY_URL}\"|" "$INSTALL_DIR/config.toml"
+        {
+            echo ""
+            echo "# Embeddings routed through primary provider (no backup configured)"
+            echo "LLM_OPENAI_COMPATIBLE_API_KEY=${PRIMARY_KEY}"
+        } >> "$INSTALL_DIR/.env"
     fi
 
     echo "  Keys saved to $INSTALL_DIR/.env"

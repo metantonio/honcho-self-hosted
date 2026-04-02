@@ -6,7 +6,7 @@ Self-host [Honcho](https://github.com/plastic-labs/honcho) (Plastic Labs' memory
 
 ## Background: Hermes L4 Memory
 
-Hermes Agent has a 4-layer memory system. Layer 2 (L4's cross-session memory) is powered by [Honcho](https://github.com/plastic-labs/honcho), which builds a deepening model of the user across conversations — extracting observations, recalling context, consolidating memories over time.
+Hermes Agent has a 4-layer memory system. The cross-session memory layer is powered by [Honcho](https://github.com/plastic-labs/honcho), which builds a deepening model of the user across conversations — extracting observations, recalling context, and consolidating memories over time.
 
 By default, Hermes uses Plastic Labs' managed cloud ([honcho.dev](https://honcho.dev)) + their Neuromancer models. This works out of the box but means your conversation data and user profile live on their servers.
 
@@ -110,6 +110,8 @@ Replace the placeholder values with your actual API keys:
 - `LLM_OPENAI_API_KEY` — same as your primary key (needed for client init)
 
 Any OpenAI-compatible provider works (OpenRouter, Venice, Routstr, Together, etc.) — just set the key and URL. See [Using different providers](#using-different-providers) for details.
+
+**If you don't want a backup provider:** remove all `BACKUP_PROVIDER` and `BACKUP_MODEL` lines from `config.toml`, and set `LLM_OPENAI_COMPATIBLE_API_KEY` + `OPENAI_COMPATIBLE_BASE_URL` to the same values as your primary (needed for embeddings). The setup script handles this automatically.
 
 ### 4. Start Honcho
 
