@@ -63,7 +63,7 @@ Hermes Agent ──► localhost:8000 (self-hosted Honcho API)
 ## Quick Start
 
 ```bash
-curl -sL https://raw.githubusercontent.com/elkimek/honcho-self-hosted/main/setup.sh -o /tmp/setup.sh
+curl -sL https://raw.githubusercontent.com/metantonio/honcho-self-hosted/main/setup.sh -o /tmp/setup.sh
 bash /tmp/setup.sh
 ```
 
@@ -92,7 +92,7 @@ Log out and back in for the group change to take effect.
 
 ```bash
 # Clone this config repo
-git clone https://github.com/elkimek/honcho-self-hosted.git ~/honcho-self-hosted
+git clone https://github.com/metantonio/honcho-self-hosted.git ~/honcho-self-hosted
 
 # Clone upstream Honcho
 git clone --depth 1 https://github.com/plastic-labs/honcho.git ~/honcho
