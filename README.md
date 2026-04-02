@@ -12,11 +12,11 @@ By default, Hermes uses Plastic Labs' managed cloud ([honcho.dev](https://honcho
 
 ## Deployment Options
 
-| Option | Data location | LLM for memory | Setup | Cost |
-|--------|--------------|----------------|-------|------|
-| **Managed cloud** (default) | Plastic Labs servers | Neuromancer (Plastic Labs) | None — built into Hermes | Free tier / paid |
-| **Self-hosted + API** (this repo) | Your VM | Any OpenAI-compatible API (OpenRouter, Venice, etc.) | ~3 minutes | API usage only |
-| **Self-hosted + local model** | Your VM | Local LLM (Ollama, vLLM on LAN) | More setup | Hardware only |
+| Option | Privacy | Data location | LLM for memory | Setup | Cost |
+|--------|---------|--------------|----------------|-------|------|
+| **Managed cloud** (default) | Low — data + inference on 3rd party | Plastic Labs servers | Neuromancer (Plastic Labs) | None — built into Hermes | Free tier / paid |
+| **Self-hosted + API** (this repo) | Medium — data on your VM, inference via API | Your VM | Any OpenAI-compatible API | ~3 minutes | API usage only |
+| **Self-hosted + local model** | High — nothing leaves your network | Your VM | Local LLM (Ollama, vLLM) | More setup | Hardware only |
 
 **Managed cloud** — Zero setup. Best for getting started. Your data is on Plastic Labs' infrastructure.
 
