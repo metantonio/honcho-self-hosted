@@ -11,6 +11,7 @@ REPO="https://github.com/metantonio/honcho-self-hosted.git"
 HONCHO_REPO="https://github.com/plastic-labs/honcho.git"
 INSTALL_DIR="$HOME/honcho"
 CONFIG_DIR="$HOME/honcho-self-hosted"
+HERMES_DIR="$HOME/hermes-agent"
 
 echo "=== Self-hosted Honcho setup ==="
 echo ""
@@ -60,9 +61,20 @@ else
     git clone -q --depth 1 "$HONCHO_REPO" "$INSTALL_DIR"
 fi
 
+if [ -d "$HERMES_DIR" ]; then
+    echo "[3+/5] Hermes repo exists, pulling latest..."
+    git -C "$HERMES_DIR" pull -q
+else
+    echo "[3+/5] Cloning Hermes Agent..."
+    git clone -q https://github.com/NousResearch/hermes-agent.git "$HERMES_DIR"
+fi
+
 # --- Copy configs (untracked by upstream, safe to overwrite) ---
 cp "$CONFIG_DIR/docker-compose.yml" "$INSTALL_DIR/"
 cp "$CONFIG_DIR/config.toml" "$INSTALL_DIR/"
+
+# Fix Hermes path in docker-compose
+sed -i "s|/home/YOUR_USER|$HOME|g" "$INSTALL_DIR/docker-compose.yml"
 
 # --- LLM provider setup ---
 if [ -f "$INSTALL_DIR/.env" ]; then
