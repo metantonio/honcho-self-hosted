@@ -32,7 +32,15 @@ Hermes Agent ──► localhost:8000 (self-hosted Honcho API)
 - OpenRouter API key ([openrouter.ai](https://openrouter.ai))
 - Venice AI API key ([venice.ai](https://venice.ai)) — optional backup + embeddings
 
-## Setup
+## Quick Start
+
+```bash
+curl -sL https://raw.githubusercontent.com/elkimek/honcho-self-hosted/main/setup.sh | bash
+```
+
+This installs Docker (if needed), clones Honcho, copies configs, prompts for API keys, starts everything, and configures Hermes. One command, ~3 minutes.
+
+## Manual Setup
 
 ### 1. Install Docker
 
@@ -196,6 +204,7 @@ docker compose exec database pg_dump -U honcho honcho > backup.sql
 | `config.toml` | Honcho config — providers, models, feature flags |
 | `env.example` | API keys template — copy to `~/honcho/.env` and fill in |
 | `honcho-config.json` | Hermes-side config — tells Hermes to use localhost:8000 |
+| `setup.sh` | One-command installer — handles everything |
 
 ## Credits
 
