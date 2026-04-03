@@ -4,8 +4,7 @@ set -euo pipefail
 # Self-hosted Honcho setup for Hermes Agent
 #
 # Usage:
-#   curl -sL https://raw.githubusercontent.com/metantonio/honcho-self-hosted/main/setup.sh -o /tmp/setup.sh
-#   bash /tmp/setup.sh
+#   curl -sL https://raw.githubusercontent.com/metantonio/honcho-self-hosted/main/setup.sh | bash
 
 REPO="https://github.com/metantonio/honcho-self-hosted.git"
 HONCHO_REPO="https://github.com/plastic-labs/honcho.git"
